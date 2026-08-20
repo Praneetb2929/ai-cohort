@@ -1,38 +1,51 @@
-import json
 from datetime import datetime, timezone
+import json
+import os
 
-# 1. Define allowed sections and sample data covering all assertion criteria
-data = [
+# Define mock chunks matching all required fields and explicit allowed values
+chunks = [
     {
         "id": "chunk_001",
-        "text": "Quarterly earnings report showed a 15% revenue increase across retail sectors.",
-        "source_file": "financial_data.csv",
-        "source_type": "structured",  # covers 'includes structured source_type'
-        "section": "overview",  # valid allowed section
+        "text": "Plan Gold covers inpatient hospital services, emergency room visits, and preventive care with a $20 copay.",
+        "source_file": "health_plans.csv",
+        "source_type": "structured",
+        "plan_type": "Gold",
+        "section": "coverage",
         "ingested_at": datetime.now(timezone.utc).isoformat(),
     },
     {
         "id": "chunk_002",
-        "text": "All field personnel must complete standard safety compliance checks before operation.",
-        "source_file": "guidelines.pdf",
-        "source_type": "unstructured",  # covers 'includes unstructured source_type'
-        "section": "details",  # valid allowed section
+        "text": "Exclusions: Cosmetic surgery, non-prescription devices, and experimental treatments are strictly not covered.",
+        "source_file": "policy_guidelines.txt",
+        "source_type": "unstructured",
+        "plan_type": "Gold",
+        "section": "exclusions",
         "ingested_at": datetime.now(timezone.utc).isoformat(),
     },
     {
         "id": "chunk_003",
-        "text": "System uptime remained at 99.98% across all primary availability zones.",
-        "source_file": "telemetry.json",
-        "source_type": "structured",
-        "section": "appendix",  # valid allowed section
+        "text": "Claims Process: Submit all electronic reimbursement claims within 90 calendar days from the date of service.",
+        "source_file": "claims_procedure.txt",
+        "source_type": "unstructured",
+        "plan_type": "Silver",
+        "section": "claims",
+        "ingested_at": datetime.now(timezone.utc).isoformat(),
+    },
+    {
+        "id": "chunk_004",
+        "text": "Open enrollment occurs annually from November 1st to December 15th for the upcoming plan year.",
+        "source_file": "enrollment_faq.txt",
+        "source_type": "unstructured",
+        "plan_type": "Bronze",
+        "section": "enrollment",
         "ingested_at": datetime.now(timezone.utc).isoformat(),
     },
 ]
 
-# 2. Write each chunk as a separate JSON line
-output_file = "knowledge_base.jsonl"
-with open(output_file, "w", encoding="utf-8") as f:
-    for entry in data:
-        f.write(json.dumps(entry) + "\n")
+# Write directly to the workspace root
+output_path = "knowledge_base.jsonl"
+with open(output_path, "w", encoding="utf-8") as f:
+    for chunk in chunks:
+        f.write(json.dumps(chunk) + "\n")
 
-print(f"Successfully generated {output_file} with {len(data)} chunks.")
+print(f"Generated {output_path} with {len(chunks)} chunks.")

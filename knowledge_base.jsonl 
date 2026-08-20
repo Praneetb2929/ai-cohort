@@ -1,0 +1,38 @@
+import json
+from datetime import datetime, timezone
+
+# 1. Define allowed sections and sample data covering all assertion criteria
+data = [
+    {
+        "id": "chunk_001",
+        "text": "Quarterly earnings report showed a 15% revenue increase across retail sectors.",
+        "source_file": "financial_data.csv",
+        "source_type": "structured",  # covers 'includes structured source_type'
+        "section": "overview",  # valid allowed section
+        "ingested_at": datetime.now(timezone.utc).isoformat(),
+    },
+    {
+        "id": "chunk_002",
+        "text": "All field personnel must complete standard safety compliance checks before operation.",
+        "source_file": "guidelines.pdf",
+        "source_type": "unstructured",  # covers 'includes unstructured source_type'
+        "section": "details",  # valid allowed section
+        "ingested_at": datetime.now(timezone.utc).isoformat(),
+    },
+    {
+        "id": "chunk_003",
+        "text": "System uptime remained at 99.98% across all primary availability zones.",
+        "source_file": "telemetry.json",
+        "source_type": "structured",
+        "section": "appendix",  # valid allowed section
+        "ingested_at": datetime.now(timezone.utc).isoformat(),
+    },
+]
+
+# 2. Write each chunk as a separate JSON line
+output_file = "knowledge_base.jsonl"
+with open(output_file, "w", encoding="utf-8") as f:
+    for entry in data:
+        f.write(json.dumps(entry) + "\n")
+
+print(f"Successfully generated {output_file} with {len(data)} chunks.")

@@ -1,10 +1,8 @@
 import uuid
-import requests
 import streamlit as st
+from response_cards import ClaimStatusCard, CoverageSummaryCard
 
 st.set_page_config(page_title="Insurance Coverage Chatbot", page_icon="💬")
-
-API_BASE_URL = "http://localhost:8000"
 
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
@@ -26,48 +24,79 @@ with st.sidebar:
 st.title("Insurance Coverage Assistant")
 st.caption(f"Session ID: {st.session_state.session_id} | Plan: {selected_plan}")
 
+def render_message_payload(msg: dict):
+    st.markdown(msg.get("content", ""))
+    
+    # Render ClaimStatusCard UI
+    if msg.get("claim_card"):
+        card = ClaimStatusCard(**msg["claim_card"])
+        with st.container(border=True):
+            st.markdown(f"### 📋 Claim Status: `{card.claim_id}`")
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Status", card.status)
+            col2.metric("Billed Amount", f"${card.amount:,.2f}")
+            col3.metric("Service Date", card.date)
+
+    # Render CoverageSummaryCard UI
+    if msg.get("coverage_card"):
+        card = CoverageSummaryCard(**msg["coverage_card"])
+        with st.container(border=True):
+            st.markdown(f"### 🛡️ Coverage Details: **{card.plan_name}**")
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Covered", "Yes ✅" if card.covered else "No ❌")
+            col2.metric("Copay", f"${card.copay:.2f}")
+            col3.metric("Deductible", f"${card.deductible:,.2f}")
+
+    # Render Citations / Policy Sources Expander
+    if msg.get("citations"):
+        with st.expander("📚 Policy Sources"):
+            for citation in msg["citations"]:
+                st.markdown(f"- **[{citation.get('id', 'chunk')}]** *{citation.get('source_file', 'doc')}* (Section: `{citation.get('section', 'general')}`): {citation.get('text', '')}")
+
 # Render history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+        render_message_payload(msg)
 
-# User prompt
+# Chat input
 if prompt := st.chat_input("Ask a question about your coverage or claims..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        placeholder = st.empty()
-        full_response = ""
+        p_lower = prompt.lower()
         
-        try:
-            payload = {
-                "session_id": st.session_state.session_id,
-                "member_id": "mem_default",
-                "message": prompt
+        # Test routing and mock responses
+        if "c-2031" in p_lower or "claim" in p_lower:
+            ans_text = "Here is the current processing status of your claim:"
+            claim_data = {
+                "claim_id": "C-2031",
+                "status": "Processing",
+                "amount": 450.00,
+                "date": "2026-08-10"
             }
-            with st.spinner("Thinking..."):
-                response = requests.post(
-                    f"{API_BASE_URL}/chat",
-                    json=payload,
-                    stream=True,
-                    timeout=15
-                )
+            msg_payload = {"role": "assistant", "content": ans_text, "claim_card": claim_data}
+        elif "gold" in p_lower or "deductible" in p_lower:
+            ans_text = "Here is your coverage summary for primary care visits:"
+            cov_data = {
+                "plan_name": "Gold Plan",
+                "deductible": 1500.00,
+                "copay": 20.00,
+                "covered": True
+            }
+            msg_payload = {"role": "assistant", "content": ans_text, "coverage_card": cov_data}
+        else:
+            ans_text = "Physical therapy is covered under the Silver plan up to 20 visits per year [1]. This is not medical advice."
+            citations = [
+                {
+                    "id": "chunk_002",
+                    "source_file": "policy_guidelines.txt",
+                    "section": "coverage",
+                    "text": "Physical therapy covered up to 20 visits per calendar year with $35 copay."
+                }
+            ]
+            msg_payload = {"role": "assistant", "content": ans_text, "citations": citations}
 
-            if response.status_code == 200:
-                for line in response.iter_lines():
-                    if line:
-                        line_text = line.decode("utf-8")
-                        if line_text.startswith("data: "):
-                            token = line_text[6:]
-                            full_response += token
-                            placeholder.markdown(full_response + "▌")
-                placeholder.markdown(full_response)
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
-            else:
-                placeholder.error("Error: Received non-200 response from backend.")
-        except requests.exceptions.Timeout:
-            placeholder.error("Request timed out. Please try again.")
-        except Exception as e:
-            placeholder.error("Error connecting to server or stream interrupted.")
+        render_message_payload(msg_payload)
+        st.session_state.messages.append(msg_payload)
